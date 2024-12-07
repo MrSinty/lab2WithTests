@@ -140,3 +140,54 @@ TEST(ArrayTest, ReverseIterator) {
     it++;
     EXPECT_EQ(*it, 1);
 }
+
+TEST(ArrayTest, Destructor) {
+    Array<int>* arr = new Array<int>();
+    arr->insert(42);
+    delete arr;
+    SUCCEED();
+}
+
+TEST(ArrayTest, CopyConstructor) {
+    Array<int> arr;
+    arr.insert(10);
+    arr.insert(20);
+
+    Array<int> copy(arr);
+    EXPECT_EQ(copy.size(), 2);
+    EXPECT_EQ(copy[0], 10);
+    EXPECT_EQ(copy[1], 20);
+}
+
+TEST(ArrayTest, MoveConstructor) {
+    Array<int> arr;
+    arr.insert(10);
+    arr.insert(20);
+
+    Array<int> moved(std::move(arr));
+    EXPECT_EQ(moved.size(), 2);
+    EXPECT_EQ(moved[0], 10);
+    EXPECT_EQ(moved[1], 20);
+
+    EXPECT_EQ(arr.size(), 0);
+}
+
+TEST(ArrayTest, StringType) {
+    Array<std::string> arr;
+    arr.insert("456");
+    arr.insert("123");
+    EXPECT_EQ(arr.size(), 2);
+    EXPECT_EQ(arr[0], "456");
+    EXPECT_EQ(arr[1], "123");
+}
+
+TEST(ArrayTest, StringRemove) {
+    Array<std::string> arr;
+    arr.insert("12");
+    arr.insert("34");
+    arr.insert("56");
+    arr.remove(1);
+    EXPECT_EQ(arr.size(), 2);
+    EXPECT_EQ(arr[0], "12");
+    EXPECT_EQ(arr[1], "56");
+}

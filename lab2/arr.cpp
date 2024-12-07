@@ -12,14 +12,46 @@ private:
     T* data = NULL;
 
 public:
-    Array() : curSize(0), capacity(8) { data = (T*)(malloc(capacity * sizeof(T))); }
+    Array() : Array(8) { }
 
     Array(int cap) : curSize(0), capacity(cap) { data = (T*)(malloc(capacity * sizeof(T))); }
 
+    Array(const Array& other) : capacity(other.capacity), curSize(other.curSize)
+    {
+        data = static_cast<T*>(malloc(capacity * sizeof(T)));
+
+        for (int i = 0; i < curSize; ++i) {
+            new (data + i) T(other.data[i]);
+        }
+    }
+
+    Array(Array&& other) : data(other.data), capacity(other.capacity), curSize(other.curSize)
+    {
+        other.data = nullptr;
+        other.capacity = 0;
+        other.curSize = 0;
+    }
+
     ~Array() {
-        clear();
-        curSize = 0;
+        for (int i = 0; i < curSize; ++i)
+            data[i].~T();
         free(data);
+    }
+
+    void add_capacity(int new_cap)
+    {
+        T* new_data = static_cast<T*>(malloc(new_cap * sizeof(T)));
+
+        for (int i = 0; i < curSize; ++i)
+        {
+            new (new_data + i) T(std::move(data[i]));
+            data[i].~T();
+        }
+
+        free(data);
+
+        data = new_data;
+        capacity = new_cap;
     }
 
     int insert(const T& value) { return insert(curSize, value); }
@@ -28,30 +60,13 @@ public:
         assert(index >= 0 && index <= curSize);
 
         if (curSize >= capacity) {
-            int newCapacity = capacity * 2;
-
-            T* newData = static_cast<T*>(malloc(newCapacity * sizeof(T)));
-            if (!newData) {
-                throw std::bad_alloc();
-            }
-
-            for (int i = 0; i < index; ++i)
-                new (newData + i) T(std::move(data[i]));
-            new (newData + index) T(value);
-            for (int i = index; i < curSize; ++i)
-                new (newData + i + 1) T(std::move(data[i]));
-
-            clear();
-            free(data);
-
-            data = newData;
-            capacity = newCapacity;
+            add_capacity(2 * capacity);
         }
-        else {
-            for (int i = curSize; i > index; --i)
-                data[i] = std::move(data[i - 1]);
-            data[index] = value;
+        for (int i = curSize; i > index; --i) {
+            new (data + i) T(std::move(data[i - 1]));
         }
+
+        new (data + index) T(value);
 
         ++curSize;
         return index;
@@ -60,9 +75,13 @@ public:
     void remove(int index) {
         assert(index >= 0 && index < curSize);
 
-        for (int i = index; i < curSize - 1; ++i)
-            data[i] = std::move(data[i + 1]);
+        data[index].~T();
 
+        for (int i = index; i < curSize - 1; ++i) {
+            new (data + i) T(std::move(data[i + 1]));
+            data[i + 1].~T();
+        }
+            
         --curSize;
     }
 
@@ -74,6 +93,21 @@ public:
     T& operator[](int index) {
         assert(index >= 0 && index < curSize);
         return data[index];
+    }
+
+    Array& operator=(const Array& other)
+    {
+        Array temp(other);
+        my_swap(temp);
+
+        return *this;
+    }
+
+    Array& operator=(Array&& other)
+    {
+        my_swap(other);
+
+        return *this;
     }
 
     int size() const {
@@ -180,5 +214,12 @@ private:
     void clear() {
         for (int i = 0; i < curSize; ++i)
             data[i].~T();
+    }
+
+    void my_swap(Array& other) noexcept
+    {
+        std::swap(data, other.data);
+        std::swap(capacity, other.capacity);
+        std::swap(curSize, other.curSize);
     }
 };
